@@ -1,20 +1,22 @@
 import os
 import sys
+import hashlib
+import zlib
 
 def loadFile(filename):
 	try:
 		fileHandle = open(filename, 'rb')
 		fileSize = os.path.getsize(filename)
+		fullFileData = fileHandle.read(fileSize) # hopefully there's enough memory lol
+		fileHandle.close()
 		isGbx = False
 		if (fileSize >= 4):
-			fileHandle.seek(fileSize - 4)
-			last4Bytes = fileHandle.read(4)
+			last4Bytes = fullFileData[-4:]
 			if (last4Bytes == b'GBX!'):
 				isGbx = True
-			fileHandle.seek(0)
-		print(f"File: {fileHandle.name} Size: {fileSize} bytes")
+		print(f"File: {filename} Size: {fileSize} bytes")
 		if (isGbx):
-			gbxFooter = readFooter(fileHandle, fileSize)
+			gbxFooter = readFooter(fullFileData)
 			if (gbxFooter):
 				parseFooter(gbxFooter)
 			else:
@@ -54,17 +56,14 @@ def parseFooter(footer):
 
 	return True
 		
-def readFooter(fileHandle, fileSize):
+def readFooter(fullFileData):
+	fileSize = len(fullFileData)
 	if (fileSize < 16):
 		return None
-	fileHandle.seek(fileSize - 16)	
-	footerSize = bytesToInt(fileHandle.read(4))
+	footerSize = bytesToInt(fullFileData[fileSize - 16:fileSize - 12])
 	if (fileSize < footerSize):
-		fileHandle.seek(0)
 		return None
-	fileHandle.seek(fileSize - footerSize)
-	gbxFooter = fileHandle.read(footerSize)
-	fileHandle.seek(0)
+	gbxFooter = fullFileData[fileSize - footerSize:]
 	return gbxFooter
 
 import sys
