@@ -38,12 +38,14 @@ class FooterData:
 		
 class RomLoader:
 
+	filename = None
 	fullRom = None
 	isGbx = False
 	gbxFooter = None
 	romWithoutFooter = None
 	
 	def load(self, filename):
+		self.filename = filename
 		fileHandle = open(filename, 'rb')
 		fileSize = os.path.getsize(filename)
 		self.fullRom = fileHandle.read(fileSize) # hopefully there's enough memory lol
@@ -64,6 +66,15 @@ class RomLoader:
 			return None
 		self.gbxFooter = self.fullRom[fileSize - footerSize:]
 		self.romWithoutFooter = self.fullRom[0:-len(self.gbxFooter)]
+		
+	def save(self, filename):
+		fileHandle = open(filename, 'wb')
+		if (self.isGbx):
+			fileHandle.write(self.romWithoutFooter)
+			fileHandle.write(self.gbxFooter)
+		else:
+			fileHandle.write(self.fullRom)
+			
 
 class RomManager:
 
@@ -84,8 +95,7 @@ class RomManager:
 		try:
 			self._romLoader = RomLoader()
 			self._romLoader.load(filename)
-			print()
-			print(f"File loaded: {filename} Size: {len(self._romLoader.fullRom)} bytes")
+			print(f"\nFile loaded: {filename} Size: {len(self._romLoader.fullRom)} bytes")
 			if (self._romLoader.isGbx):
 				if (self._romLoader.gbxFooter):
 					print()
@@ -93,20 +103,39 @@ class RomManager:
 					if (self._footerData.supportedVer):
 						self.loadedGbx = True
 				else:
-					print()
-					print("Invalid GBX footer")
+					print("\nInvalid GBX footer")
 			else:
 				self.loadedNonGbx = True
-				print("No GBX footer detected")
+				print("\nNo GBX footer detected")
 		except FileNotFoundError:
-			print("File not found")
+			print("\nFile not found")
+		except OSError:
+			print("\nError loading file")
 		print()	
+	
+	def removeFooter(self):
+		newFilename = self._getFilename()
+		self._romLoader.fullRom = self._romLoader.romWithoutFooter
+		self._romLoader.isGbx = False
+		self._romLoader.romWithoutFooter = None
+		self._romLoader.gbxFooter = None
+		try:
+			self._romLoader.save(newFilename)
+			print(f"\nRemoved footer and saved as {newFilename}")
+		except OSError:
+			print("\nError saving file")
 		
 	def printAllHashes(self):
 		self.printHashes("File hashes", self._romLoader.fullRom)
 		if (self._romLoader.gbxFooter):
 			self.printHashes("ROM data hashes", self._romLoader.romWithoutFooter)
 			self.printHashes("Footer hashes", self._romLoader.gbxFooter)
+			
+	def _getFilename(self):
+		filename = None
+		while (not filename):
+			filename = input("Enter new filename (will overwrite if present): " )
+		return filename	
 	
 	def _parseFooter(self):
 		footerData = FooterData()
@@ -133,8 +162,7 @@ elif (romManager.loadedNonGbx):
 	validOptions = ["h", "a", "x"]
 	print("Options: (H) Display hashes / (A) Add footer / (X) Exit")
 else:
-	validOptions = ["h", "x"]
-	print("Options: (H) Display hashes / (X) Exit")
+	exit()
 
 mode = None
 while (mode not in validOptions):
@@ -146,7 +174,7 @@ if (mode == "h"):
 elif (mode == "a"):
 	print("add not done yet")
 elif (mode == "r"):
-	print("remove not done yet")
+	romManager.removeFooter()
 elif (mode == "e"):
 	print("edit not done yet")
 else:
