@@ -3,18 +3,23 @@ import sys
 import hashlib
 import zlib
 
+gbxMajorVer = 1
+gbxMinorVer = 0
+scriptRevisionVer = "dev"
+
 def bytesToInt(bytes):
 	return int(bytes.hex(), 16)
 
 class FooterData:
-
-	def __init__(self, mapper, hasBattery, hasRumble, hasRtc, romSize, ramSize):
-		self.mapper = mapper
-		self.hasBattery = hasBattery
-		self.hasRumble = hasRumble
-		self.hasRtc = hasRtc
-		self.romSize = romSize
-		self.ramSize = ramSize
+	majorVer = None
+	minorVer = None
+	supportedVer = False
+	mapper = None
+	hasBattery = None
+	hasRumble = None
+	hasRtc = None
+	romSize = None
+	ramSize = None
 		
 class RomManager:
 
@@ -40,7 +45,7 @@ class RomManager:
 		if (fileSize < 16):
 			return None
 		footerSize = bytesToInt(self.fullRom[fileSize - 16:fileSize - 12])
-		if (fileSize < footerSize):
+		if (fileSize < footerSize or footerSize < 16):
 			return None
 		self.gbxFooter = self.fullRom[fileSize - footerSize:]
 		self.romWithoutFooter = self.fullRom[0:-len(self.gbxFooter)]
@@ -79,34 +84,39 @@ class RomReader:
 		print()	
 		
 	def parseFooter(self, footer):
+		
+		footerData = FooterData()
 
-		MAX_SUPPORTED_MAJOR_VERSION = 1
-
-		footerMajVer = bytesToInt(footer[-12:-8])
-		footerMinVer = bytesToInt(footer[-8:-4])
-		footerSize = bytesToInt(footer[-16:-12])
-
-		print(f"GBX footer found - ver {footerMajVer}.{footerMinVer}, size {footerSize} bytes")
-
-		if (footerMajVer != MAX_SUPPORTED_MAJOR_VERSION):
+		footerData.majorVer = bytesToInt(footer[-12:-8])
+		footerData.minorVer = bytesToInt(footer[-8:-4])
+		footerData.size = bytesToInt(footer[-16:-12])
+		
+		if (footerData.majorVer > gbxMajorVer or (footerData.majorVer == gbxMajorVer and footerData.minorVer > gbxMinorVer)):
+			footerData.supportedVer = False
+		else:
+			footerData.supportedVer = True
+		
+		if (footerData.supportedVer):
+			footerData.mapper = footer[0:4].decode('ascii')
+			footerData.romSize = bytesToInt(footer[8:12])
+			footerData.ramSize = bytesToInt(footer[12:16])
+			footerData.hasBattery = footer[4]
+			footerData.hasRtc = footer[5]
+			footerData.hasRumble = footer[6]
+			
+		print(f"GBX footer found - ver {footerData.majorVer}.{footerData.minorVer}, size {footerData.size} bytes")	
+			
+		if (not footerData.supportedVer):
 			print("GBX version not supported!!")
-			return False
 
-		if (footerSize < 16):
-			print("invalid footer size!!")
-			return False
+		print(f"Mapper {footerData.mapper} / Batt {footerData.hasBattery} / Rumble {footerData.hasRumble} / RTC {footerData.hasRtc} / ROM {footerData.romSize} bytes / RAM {footerData.ramSize} bytes")
 		
-		mapper = footer[0:4].decode('ascii')
-		romSize = bytesToInt(footer[8:12])
-		ramSize = bytesToInt(footer[12:16])
-
-		print(f"Mapper {mapper} / Batt {footer[4]} / Rumble {footer[5]} / RTC {footer[6]} / ROM {romSize} bytes / RAM {ramSize} bytes")
-		
-		return FooterData(mapper, footer[4], footer[5], footer[6], romSize, ramSize)
+		return footerData
 
 import sys
+print("GBX ROM Tool v{gbxMajorVer}.{gbxMinorVer}.{scriptRevisionVer}")
 if len(sys.argv) != 2:
-	print("usage: py gbx.py filename.gbx")
+	print("Usage: py gbx.py filename.gbx")
 	exit()
 romReader = RomReader()	
 romReader.loadFile(sys.argv[1])
