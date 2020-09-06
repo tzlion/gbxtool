@@ -69,6 +69,9 @@ class RomManager:
 
 	_romLoader = None
 	_footerData = None
+	
+	loadedNonGbx = False
+	loadedGbx = False
 
 	def printHashes(self, prefix, data):
 		crc32 = format(zlib.crc32(data), "x")
@@ -86,22 +89,26 @@ class RomManager:
 			if (self._romLoader.isGbx):
 				if (self._romLoader.gbxFooter):
 					print()
-					self._footerData = self.parseFooter()
+					self._footerData = self._parseFooter()
+					if (self._footerData.supportedVer):
+						self.loadedGbx = True
 				else:
 					print()
 					print("Invalid GBX footer")
 			else:
+				self.loadedNonGbx = True
 				print("No GBX footer detected")
-			print()
-			self.printHashes("File hashes", self._romLoader.fullRom)
-			if (self._romLoader.gbxFooter):
-				self.printHashes("ROM data hashes", self._romLoader.romWithoutFooter)
-				self.printHashes("Footer hashes", self._romLoader.gbxFooter)
 		except FileNotFoundError:
 			print("File not found")
 		print()	
 		
-	def parseFooter(self):
+	def printAllHashes(self):
+		self.printHashes("File hashes", self._romLoader.fullRom)
+		if (self._romLoader.gbxFooter):
+			self.printHashes("ROM data hashes", self._romLoader.romWithoutFooter)
+			self.printHashes("Footer hashes", self._romLoader.gbxFooter)
+	
+	def _parseFooter(self):
 		footerData = FooterData()
 		footerData.parse(self._romLoader.gbxFooter)
 		print(f"GBX footer found: ver {footerData.majorVer}.{footerData.minorVer}, size {footerData.size} bytes")	
@@ -110,11 +117,38 @@ class RomManager:
 		else:
 			print(f"Mapper {footerData.mapper} / Batt {footerData.hasBattery} / Rumble {footerData.hasRumble} / RTC {footerData.hasRtc} / ROM {footerData.romSize} bytes / RAM {footerData.ramSize} bytes")
 		return footerData
-	
-import sys
+
 print(f"GBX ROM Tool v{gbxMajorVer}.{gbxMinorVer}.{scriptRevisionVer}")
 if len(sys.argv) != 2:
 	print("Usage: py gbx.py filename.gbx")
 	exit()
+
 romManager = RomManager()
 romManager.loadFile(sys.argv[1])
+
+if (romManager.loadedGbx):
+	validOptions = ["h", "e", "r", "x"]
+	print("Options: (H) Display hashes / (E) Edit footer / (R) Remove footer / (X) Exit")
+elif (romManager.loadedNonGbx):
+	validOptions = ["h", "a", "x"]
+	print("Options: (H) Display hashes / (A) Add footer / (X) Exit")
+else:
+	validOptions = ["h", "x"]
+	print("Options: (H) Display hashes / (X) Exit")
+
+mode = None
+while (mode not in validOptions):
+	mode = input("Enter option: ").lower()
+print()	
+
+if (mode == "h"):
+	romManager.printAllHashes()
+elif (mode == "a"):
+	print("add not done yet")
+elif (mode == "r"):
+	print("remove not done yet")
+elif (mode == "e"):
+	print("edit not done yet")
+else:
+	print("Bye")
+print()	
