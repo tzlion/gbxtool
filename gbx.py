@@ -11,6 +11,7 @@ def bytesToInt(bytes):
 	return int(bytes.hex(), 16)
 
 class FooterData:
+
 	majorVer = None
 	minorVer = None
 	supportedVer = False
@@ -20,8 +21,22 @@ class FooterData:
 	hasRtc = None
 	romSize = None
 	ramSize = None
+	
+	def parse(self, footer):
+		self.majorVer = bytesToInt(footer[-12:-8])
+		self.minorVer = bytesToInt(footer[-8:-4])
+		self.size = bytesToInt(footer[-16:-12])
+		if (self.majorVer > gbxMajorVer or (self.majorVer == gbxMajorVer and self.minorVer > gbxMinorVer)):
+			return # unsupported version
+		self.supportedVer = True
+		self.mapper = footer[0:4].decode('ascii')
+		self.romSize = bytesToInt(footer[8:12])
+		self.ramSize = bytesToInt(footer[12:16])
+		self.hasBattery = footer[4]
+		self.hasRtc = footer[5]
+		self.hasRumble = footer[6]
 		
-class RomManager:
+class RomLoader:
 
 	fullRom = None
 	isGbx = False
@@ -49,8 +64,11 @@ class RomManager:
 			return None
 		self.gbxFooter = self.fullRom[fileSize - footerSize:]
 		self.romWithoutFooter = self.fullRom[0:-len(self.gbxFooter)]
-		
-class RomReader:
+
+class RomManager:
+
+	_romLoader = None
+	_footerData = None
 
 	def printHashes(self, prefix, data):
 		crc32 = format(zlib.crc32(data), "x")
@@ -61,62 +79,42 @@ class RomReader:
 
 	def loadFile(self, filename):
 		try:
-			romManager = RomManager()
-			romManager.load(filename)
+			self._romLoader = RomLoader()
+			self._romLoader.load(filename)
 			print()
-			print(f"File: {filename} Size: {len(romManager.fullRom)} bytes")
-			if (romManager.isGbx):
-				if (romManager.gbxFooter):
+			print(f"File loaded: {filename} Size: {len(self._romLoader.fullRom)} bytes")
+			if (self._romLoader.isGbx):
+				if (self._romLoader.gbxFooter):
 					print()
-					self.parseFooter(romManager.gbxFooter)
+					self._footerData = self.parseFooter()
 				else:
 					print()
 					print("Invalid GBX footer")
 			else:
 				print("No GBX footer detected")
 			print()
-			self.printHashes("File hashes", romManager.fullRom)
-			if (romManager.gbxFooter):
-				self.printHashes("ROM data hashes", romManager.romWithoutFooter)
-				self.printHashes("Footer hashes", romManager.gbxFooter)
+			self.printHashes("File hashes", self._romLoader.fullRom)
+			if (self._romLoader.gbxFooter):
+				self.printHashes("ROM data hashes", self._romLoader.romWithoutFooter)
+				self.printHashes("Footer hashes", self._romLoader.gbxFooter)
 		except FileNotFoundError:
 			print("File not found")
 		print()	
 		
-	def parseFooter(self, footer):
-		
+	def parseFooter(self):
 		footerData = FooterData()
-
-		footerData.majorVer = bytesToInt(footer[-12:-8])
-		footerData.minorVer = bytesToInt(footer[-8:-4])
-		footerData.size = bytesToInt(footer[-16:-12])
-		
-		if (footerData.majorVer > gbxMajorVer or (footerData.majorVer == gbxMajorVer and footerData.minorVer > gbxMinorVer)):
-			footerData.supportedVer = False
-		else:
-			footerData.supportedVer = True
-		
-		if (footerData.supportedVer):
-			footerData.mapper = footer[0:4].decode('ascii')
-			footerData.romSize = bytesToInt(footer[8:12])
-			footerData.ramSize = bytesToInt(footer[12:16])
-			footerData.hasBattery = footer[4]
-			footerData.hasRtc = footer[5]
-			footerData.hasRumble = footer[6]
-			
-		print(f"GBX footer found - ver {footerData.majorVer}.{footerData.minorVer}, size {footerData.size} bytes")	
-			
+		footerData.parse(self._romLoader.gbxFooter)
+		print(f"GBX footer found: ver {footerData.majorVer}.{footerData.minorVer}, size {footerData.size} bytes")	
 		if (not footerData.supportedVer):
 			print("GBX version not supported!!")
-
-		print(f"Mapper {footerData.mapper} / Batt {footerData.hasBattery} / Rumble {footerData.hasRumble} / RTC {footerData.hasRtc} / ROM {footerData.romSize} bytes / RAM {footerData.ramSize} bytes")
-		
+		else:
+			print(f"Mapper {footerData.mapper} / Batt {footerData.hasBattery} / Rumble {footerData.hasRumble} / RTC {footerData.hasRtc} / ROM {footerData.romSize} bytes / RAM {footerData.ramSize} bytes")
 		return footerData
-
+	
 import sys
-print("GBX ROM Tool v{gbxMajorVer}.{gbxMinorVer}.{scriptRevisionVer}")
+print(f"GBX ROM Tool v{gbxMajorVer}.{gbxMinorVer}.{scriptRevisionVer}")
 if len(sys.argv) != 2:
 	print("Usage: py gbx.py filename.gbx")
 	exit()
-romReader = RomReader()	
-romReader.loadFile(sys.argv[1])
+romManager = RomManager()
+romManager.loadFile(sys.argv[1])
