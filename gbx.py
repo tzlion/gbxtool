@@ -3,6 +3,12 @@ import sys
 import hashlib
 import zlib
 
+def printHashes(prefix, data):
+	crc32 = format(zlib.crc32(data), "x")
+	md5 = hashlib.md5(data).hexdigest()
+	sha1 = hashlib.sha1(data).hexdigest()
+	print(f"{prefix}:\n crc32 {crc32}\n md5   {md5}\n sha1  {sha1}")
+
 def loadFile(filename):
 	try:
 		fileHandle = open(filename, 'rb')
@@ -14,18 +20,28 @@ def loadFile(filename):
 			last4Bytes = fullFileData[-4:]
 			if (last4Bytes == b'GBX!'):
 				isGbx = True
+		print()
 		print(f"File: {filename} Size: {fileSize} bytes")
+		gbxFooter = None
 		if (isGbx):
 			gbxFooter = readFooter(fullFileData)
 			if (gbxFooter):
+				print()
 				parseFooter(gbxFooter)
 			else:
+				print()
 				print("Invalid GBX footer")
 		else:
 			print("No GBX footer detected")
-		fileHandle.close()
+		print()
+		printHashes("File hashes", fullFileData);
+		if (gbxFooter):
+			romWithoutFooter = fullFileData[0:-len(gbxFooter)]
+			printHashes("ROM data hashes", romWithoutFooter)
+			printHashes("Footer hashes", gbxFooter)
 	except FileNotFoundError:
-		print("file not found")
+		print("File not found")
+	print()	
 
 def bytesToInt(bytes):
 	return int(bytes.hex(), 16)
@@ -68,6 +84,6 @@ def readFooter(fullFileData):
 
 import sys
 if len(sys.argv) != 2:
-	print("usage: python gbx.py filename.gbx")
+	print("usage: py gbx.py filename.gbx")
 	exit()
 loadFile(sys.argv[1])
