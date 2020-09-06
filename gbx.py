@@ -3,6 +3,7 @@ import sys
 import hashlib
 import zlib
 import re
+import binascii
 
 gbxMajorVer = 1
 gbxMinorVer = 0
@@ -10,6 +11,14 @@ scriptRevisionVer = "dev"
 
 def bytesToInt(bytes):
 	return int(bytes.hex(), 16)
+
+def intTo4Bytes(int):
+	hex = format(int, "x").rjust(8, "0")[0:8]
+	return binascii.unhexlify(hex)
+
+def intTo1Byte(int):
+	hex = format(int, "x").rjust(2, "0")[0:2]
+	return binascii.unhexlify(hex)
 
 class FooterData:
 
@@ -39,7 +48,14 @@ class FooterData:
 		self.hasRumble = footer[6]
 		
 	def build(self):
-		return b"penispenispenispenispenispenispenispenispenispenispenispenispeni"
+		return (
+			self.mapper.encode('ascii')
+			+ intTo1Byte(self.hasBattery) + intTo1Byte(self.hasRtc) + intTo1Byte(self.hasRumble) + intTo1Byte(0)
+			+ intTo4Bytes(self.romSize)
+			+ intTo4Bytes(self.ramSize) 
+			+ binascii.unhexlify("00" * 32) 
+			+ intTo4Bytes(self.size) + intTo4Bytes(self.majorVer) + intTo4Bytes(self.minorVer) + b"GBX!"
+		)
 		
 class RomLoader:
 
