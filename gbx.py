@@ -7,7 +7,8 @@ def printHashes(prefix, data):
 	crc32 = format(zlib.crc32(data), "x")
 	md5 = hashlib.md5(data).hexdigest()
 	sha1 = hashlib.sha1(data).hexdigest()
-	print(f"{prefix}:\n crc32 {crc32}\n md5   {md5}\n sha1  {sha1}")
+	sha256 = hashlib.sha256(data).hexdigest()
+	print(f"{prefix}:\n crc32  {crc32}\n md5    {md5}\n sha1   {sha1}\n sha256 {sha256}")
 
 def loadFile(filename):
 	try:
