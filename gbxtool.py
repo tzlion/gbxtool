@@ -253,7 +253,7 @@ class RomManager:
 def run():
 	print(f"GBX ROM Tool v{gbxMajorVer}.{gbxMinorVer}.{scriptRevisionVer}")
 	if len(sys.argv) != 2:
-		print("Usage: py gbx.py filename.gbx")
+		print("Usage: py gbxtool.py filename.gbx")
 		exit()
 
 	romManager = RomManager()
@@ -289,5 +289,3 @@ try:
 	run()
 except KeyboardInterrupt:
 	pass
-
-	
