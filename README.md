@@ -1,7 +1,7 @@
 gbxtool - GBX ROM Tool
 ======================
 
-v1.0.dev (in-development version)
+v1.0.0-beta
 
 For GBX ROM format v1.0 - http://hhug.me/gbx/1.0
 

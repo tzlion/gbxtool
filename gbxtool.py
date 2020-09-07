@@ -7,7 +7,7 @@ import binascii
 
 gbxMajorVer = 1
 gbxMinorVer = 0
-scriptRevisionVer = "dev"
+scriptRevisionVer = "0-beta"
 
 def bytesToInt(bytes):
 	return int(bytes.hex(), 16)
